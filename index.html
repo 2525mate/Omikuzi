@@ -3,134 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>みんなのおみくじ</title>
+    <title>🏮おみくじ🏮</title>
     <style>
-        :root { --primary-color: #e63946; --bg-color: #f4f4f4; }
-        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: var(--bg-color); color: #333; user-select: none; }
-        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; margin: 40px auto; }
-        h2 { color: var(--primary-color); cursor: default; margin-bottom: 20px; }
-        .input-group { text-align: left; margin-bottom: 15px; }
-        label { font-size: 0.8rem; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
-        input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; font-size: 1rem; }
-        button { background-color: var(--primary-color); color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        #result { margin-top: 25px; font-size: 1.5rem; font-weight: bold; min-height: 1.5rem; }
-        #timerText { margin-top: 10px; font-size: 0.8rem; color: #888; }
+        :root { --primary-color: #e63946; --bg-color: #f8f9fa; --success-color: #28a745; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; padding: 20px; background-color: var(--bg-color); color: #333; }
+        .container { background: white; padding: 40px 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 400px; margin: 40px auto; }
+        h2 { color: var(--primary-color); margin-top: 0; font-size: 1.8rem; letter-spacing: 2px; }
+        .input-group { text-align: left; margin-bottom: 20px; }
+        label { font-size: 0.85rem; font-weight: bold; color: #666; display: block; margin-bottom: 8px; }
+        input { width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #eee; box-sizing: border-box; font-size: 1.1rem; outline: none; transition: border 0.3s; }
+        input:focus { border-color: var(--primary-color); }
+        button { width: 100%; padding: 15px; border-radius: 10px; border: none; background-color: var(--primary-color); color: white; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.1s, background 0.3s; }
+        button:hover { background-color: #d62839; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; transform: none; }
+        #result { margin-top: 30px; font-size: 1.8rem; font-weight: bold; min-height: 2.5rem; }
+        #timerText { margin-top: 15px; font-size: 0.9rem; font-weight: bold; min-height: 1.2rem; }
+        .footer { margin-top: 20px; font-size: 0.7rem; color: #bbb; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 onclick="handleSecretTap()">🏮 おみくじ 🏮</h2>
+    <h2>🏮 おみくじ 🏮</h2>
     
     <div class="input-group">
         <label>お名前</label>
-        <input type="text" id="userName" placeholder="名前を入力してください">
+        <input type="text" id="userName" placeholder="名前を入力してください" maxlength="15">
     </div>
 
-    <button id="drawBtn" onclick="drawOmikuji()">おみくじを引く</button>
+    <button id="drawBtn" onclick="drawOmikuji()">運勢を占う</button>
     
     <div id="result"></div>
-    <p id="timerText"></p>
+    <div id="timerText"></div>
+    
+    <div class="footer">12時間に1回引くことができます</div>
 </div>
 
 <script>
-    // ==========================================
-    // 【重要】ここだけ書き換えてください
-    // ==========================================
-    const CONFIG = {
-        // あなたのWebhook URLを "" の中に貼り付けてください
-        url: "https://discord.com/api/webhooks/1501209904910700604/CVyTfNhiqhFys7eVQ9D8iNVYsiWjm6Jo4K8rJDoD7p8ORUx9eb0teUgTEKMSSeP6e97k",
-        // 管理者パスワード（5連打リセット用）
-        pass: "mixkurs0613"
-    };
-    // ==========================================
-
+    // --- 【設定】あなたのGASウェブアプリURLをここに貼る ---
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz4Cg-5IKlqkhlfT4NF8cSNqmCfStfezfyb0IMnmO4Z486hIjfdoWPIYsWyqS334AxMHw/exec";
     const COOLDOWN_MS = 12 * 60 * 60 * 1000;
-    let tapCount = 0;
-    let tapTimer;
 
     window.onload = () => {
         const savedName = localStorage.getItem('omikuji_name');
         if (savedName) document.getElementById('userName').value = savedName;
-        checkCooldown();
+        
+        // カウントダウン表示の開始
+        startCountdown();
     };
 
-    function checkCooldown() {
+    function startCountdown() {
+        updateTimerDisplay();
+        setInterval(updateTimerDisplay, 1000); // 1秒ごとに更新
+    }
+
+    function updateTimerDisplay() {
         const lastDraw = localStorage.getItem('omikuji_last_time');
-        const drawBtn = document.getElementById('drawBtn');
+        const btn = document.getElementById('drawBtn');
         const timerText = document.getElementById('timerText');
 
-        if (lastDraw) {
-            const diff = new Date().getTime() - parseInt(lastDraw);
-            if (diff < COOLDOWN_MS) {
-                drawBtn.disabled = true;
-                const remain = COOLDOWN_MS - diff;
-                const h = Math.floor(remain / 3600000);
-                const m = Math.floor((remain % 3600000) / 60000);
-                timerText.innerText = `次まであと ${h}時間 ${m}分`;
-                return false;
-            }
+        if (!lastDraw) {
+            btn.disabled = false;
+            timerText.innerText = "✨ 今すぐ引けます！";
+            timerText.style.color = "#28a745";
+            return;
         }
-        drawBtn.disabled = false;
-        timerText.innerText = "12時間に1回引けます";
-        return true;
+
+        const now = new Date().getTime();
+        const diff = now - parseInt(lastDraw);
+
+        if (diff < COOLDOWN_MS) {
+            btn.disabled = true;
+            const remain = COOLDOWN_MS - diff;
+            const hours = Math.floor(remain / (1000 * 60 * 60));
+            const minutes = Math.floor((remain % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((remain % (1000 * 60)) / 1000);
+            
+            timerText.innerText = `⏳ 残り ${hours}時間 ${minutes}分 ${seconds}秒`;
+            timerText.style.color = "#e63946";
+        } else {
+            btn.disabled = false;
+            timerText.innerText = "✨ 再び引けるようになりました！";
+            timerText.style.color = "#28a745";
+        }
     }
 
     async function drawOmikuji() {
         const nameInput = document.getElementById('userName');
         const name = nameInput.value.trim();
-        
-        if (!name) return alert("名前を入力してください");
-        if (CONFIG.url.includes("ここに")) return alert("管理者がURLを設定していません");
-
-        if (!checkCooldown()) return;
-
-        // 名前をブラウザに保存
-        localStorage.setItem('omikuji_name', name);
+        if (!name) return alert("お名前を教えてください！");
 
         const fortunes = ["大吉", "中吉", "小吉", "吉", "末吉", "凶"];
         const result = fortunes[Math.floor(Math.random() * fortunes.length)];
 
-        document.getElementById('result').innerText = "抽選中...";
-        
-        setTimeout(async () => {
-            document.getElementById('result').innerHTML = `結果：<span style="color:#e63946">${result}</span>`;
+        const resultDiv = document.getElementById('result');
+        const btn = document.getElementById('drawBtn');
+
+        resultDiv.innerText = "祈祷中...";
+        btn.disabled = true;
+
+        try {
+            // GASへ送信
+            await fetch(GAS_API_URL, {
+                method: "POST",
+                body: JSON.stringify({ name: name, result: result })
+            });
+            
+            // 成功したら表示と保存
+            resultDiv.innerHTML = `結果：<span style="color:#e63946">${result}</span>`;
+            localStorage.setItem('omikuji_name', name);
             localStorage.setItem('omikuji_last_time', new Date().getTime().toString());
             
-            await sendToWebhook(CONFIG.url, name, result);
-            checkCooldown();
-        }, 1000);
-    }
-
-    async function sendToWebhook(url, name, result) {
-        try {
-            await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: `🔮 **${name}** さんの運勢は **【${result}】** でした！` })
-            });
-        } catch (e) { console.error("Webhook送信エラー"); }
-    }
-
-    function handleSecretTap() {
-        tapCount++;
-        clearTimeout(tapTimer);
-        if (tapCount >= 5) {
-            const inputPass = prompt("管理者パスワードを入力:");
-            if (inputPass === CONFIG.pass) {
-                localStorage.removeItem('omikuji_last_time');
-                alert("自分の待ち時間をリセットしました。");
-                location.reload();
-            }
-            tapCount = 0;
-        } else {
-            tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
+            updateTimerDisplay();
+        } catch (e) {
+            alert("通信エラーが発生しました。");
+            btn.disabled = false;
+            resultDiv.innerText = "";
         }
     }
 </script>
-
-</body>
-</html>
 </body>
 </html>
