@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>おみくじApp</title>
+    <title>みんなのおみくじ</title>
     <style>
         :root { --primary-color: #e63946; --bg-color: #f4f4f4; }
         body { font-family: sans-serif; text-align: center; padding: 20px; background-color: var(--bg-color); color: #333; user-select: none; }
         .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; margin: 40px auto; }
         h2 { color: var(--primary-color); cursor: default; margin-bottom: 20px; }
         .input-group { text-align: left; margin-bottom: 15px; }
-        label { font-size: 0.8rem; font-weight: bold; color: #666; }
+        label { font-size: 0.8rem; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
         input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; font-size: 1rem; }
         button { background-color: var(--primary-color); color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
@@ -21,7 +21,6 @@
 <body>
 
 <div class="container">
-    <!-- タイトルを5回タップでリセット発動 -->
     <h2 onclick="handleSecretTap()">🏮 おみくじ 🏮</h2>
     
     <div class="input-group">
@@ -36,7 +35,18 @@
 </div>
 
 <script>
-    const COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12時間
+    // ==========================================
+    // 【重要】ここだけ書き換えてください
+    // ==========================================
+    const CONFIG = {
+        // あなたのWebhook URLを "" の中に貼り付けてください
+        url: "https://discord.com/api/webhooks/1501209904910700604/CVyTfNhiqhFys7eVQ9D8iNVYsiWjm6Jo4K8rJDoD7p8ORUx9eb0teUgTEKMSSeP6e97k",
+        // 管理者パスワード（5連打リセット用）
+        pass: "mixkurs0613"
+    };
+    // ==========================================
+
+    const COOLDOWN_MS = 12 * 60 * 60 * 1000;
     let tapCount = 0;
     let tapTimer;
 
@@ -44,10 +54,8 @@
         const savedName = localStorage.getItem('omikuji_name');
         if (savedName) document.getElementById('userName').value = savedName;
         checkCooldown();
-        setInterval(checkCooldown, 60000); // 1分ごとに更新
     };
 
-    // 1. クールダウン確認
     function checkCooldown() {
         const lastDraw = localStorage.getItem('omikuji_last_time');
         const drawBtn = document.getElementById('drawBtn');
@@ -65,31 +73,22 @@
             }
         }
         drawBtn.disabled = false;
-        timerText.innerText = "今なら引けます！";
+        timerText.innerText = "12時間に1回引けます";
         return true;
     }
 
-    // 2. おみくじ実行
     async function drawOmikuji() {
-        const name = document.getElementById('userName').value.trim();
+        const nameInput = document.getElementById('userName');
+        const name = nameInput.value.trim();
+        
         if (!name) return alert("名前を入力してください");
-
-        // 初回設定チェック（Webhook & パスワード）
-        let webhookUrl = localStorage.getItem('omikuji_webhook_url');
-        let adminPass = localStorage.getItem('omikuji_admin_pass');
-
-        if (!webhookUrl || !adminPass) {
-            alert("初回設定を行います。");
-            webhookUrl = prompt("通知用Webhook URLを入力してください:");
-            adminPass = prompt("管理者パスワード（リセット用）を設定してください:");
-            if (!webhookUrl || !adminPass) return alert("設定が不完全です");
-            localStorage.setItem('omikuji_webhook_url', webhookUrl);
-            localStorage.setItem('omikuji_admin_pass', adminPass);
-        }
+        if (CONFIG.url.includes("ここに")) return alert("管理者がURLを設定していません");
 
         if (!checkCooldown()) return;
 
+        // 名前をブラウザに保存
         localStorage.setItem('omikuji_name', name);
+
         const fortunes = ["大吉", "中吉", "小吉", "吉", "末吉", "凶"];
         const result = fortunes[Math.floor(Math.random() * fortunes.length)];
 
@@ -99,12 +98,11 @@
             document.getElementById('result').innerHTML = `結果：<span style="color:#e63946">${result}</span>`;
             localStorage.setItem('omikuji_last_time', new Date().getTime().toString());
             
-            await sendToWebhook(webhookUrl, name, result);
+            await sendToWebhook(CONFIG.url, name, result);
             checkCooldown();
         }, 1000);
     }
 
-    // 3. Webhook送信
     async function sendToWebhook(url, name, result) {
         try {
             await fetch(url, {
@@ -112,25 +110,18 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: `🔮 **${name}** さんの運勢は **【${result}】** でした！` })
             });
-        } catch (e) { console.error("Webhook Error"); }
+        } catch (e) { console.error("Webhook送信エラー"); }
     }
 
-    // 4. 隠しリセット機能（5回連打 + パスワード）
     function handleSecretTap() {
         tapCount++;
         clearTimeout(tapTimer);
-        
         if (tapCount >= 5) {
-            const savedPass = localStorage.getItem('omikuji_admin_pass');
-            const inputPass = prompt("管理者パスワードを入力してください:");
-            
-            if (savedPass && inputPass === savedPass) {
-                if (confirm("全データを削除して初期化しますか？")) {
-                    localStorage.clear();
-                    location.reload();
-                }
-            } else {
-                alert("認証失敗または設定がありません。");
+            const inputPass = prompt("管理者パスワードを入力:");
+            if (inputPass === CONFIG.pass) {
+                localStorage.removeItem('omikuji_last_time');
+                alert("自分の待ち時間をリセットしました。");
+                location.reload();
             }
             tapCount = 0;
         } else {
@@ -139,5 +130,7 @@
     }
 </script>
 
+</body>
+</html>
 </body>
 </html>
