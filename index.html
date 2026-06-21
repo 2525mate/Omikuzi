@@ -123,5 +123,54 @@
         }
     }
 </script>
+    <!-- リンク表示エリア -->
+<div class="banner-container">
+    <p class="banner-title">＼ にこめいとの活動をチェック！ ／</p>
+    
+    <!-- YouTubeリンク（画像やテキストは自由に変えてください） -->
+    <a href="https://www.youtube.com/channel/UCarDivFYLQgs9G_BQtwuopw" target="_blank" rel="noopener" class="banner-link youtube-btn">
+        <span>📺 YouTubeチャンネル</span>
+    </a>
+
+    <!-- LINEスタンプリンク -->
+    <a href="https://line.me/S/shop/sticker/author/5326084/top?lang=ja&utm_source=gnsh_staut" target="_blank" rel="noopener" class="banner-link line-btn">
+        <span>💬 LINEスタンプはこちら</span>
+    </a>
+</div>
+
+<!-- 見た目を整えるためのデザイン（CSS） -->
+<style>
+.banner-container {
+    margin-top: 40px;
+    padding: 20px;
+    border-top: 2px dashed #ccc;
+    text-align: center;
+    font-family: sans-serif;
+}
+.banner-title {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+}
+.banner-link {
+    display: inline-block;
+    width: 250px;
+    margin: 10px;
+    padding: 12px;
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+.banner-link:hover {
+    transform: translateY(-2px);
+}
+/* YouTubeカラー */
+.youtube-btn { background-color: #ff0000; }
+/* LINEカラー */
+.line-btn { background-color: #06c755; }
+</style>
 </body>
 </html>
